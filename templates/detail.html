@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}{{ server.name }} · Linux Monitor{% endblock %}
+
+{% block nav %}
+  <a class="nav-link" href="{{ url_for('main.index') }}">Overview</a>
+  <a class="nav-link" href="{{ url_for('main.manage_servers') }}">Manage</a>
+  <form method="post" action="{{ url_for('main.logout') }}" class="nav-form">
+    <button type="submit" class="btn btn-ghost">Sign out</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+<section class="page-intro">
+  <div>
+    <p class="eyebrow">Server detail</p>
+    <h1>{{ server.name }}</h1>
+    <p class="lede">{{ server.host }} · {{ server.ssh_user }}@ · port {{ server.ssh_port }}</p>
+  </div>
+  <div class="toolbar">
+    <span class="badge badge-{{ metrics.health }}">{% if metrics.reachable %}{{ metrics.health }}{% else %}offline{% endif %}</span>
+    <span class="meta" id="last-refreshed">Last refreshed: {{ last_refreshed }}</span>
+    <button type="button" class="btn btn-primary" id="refresh-btn">Refresh</button>
+  </div>
+</section>
+
+<div id="detail-root" data-api="{{ url_for('main.api_server_metrics', server_id=server.id) }}" data-refresh-ms="8000">
+  {% if metrics.reachable %}
+    <div class="detail-grid">
+      <section class="panel">
+        <h2>CPU</h2>
+        <p class="gauge-value" id="d-cpu">{{ metrics.cpu_percent }}%</p>
+        <div class="bar"><div class="bar-fill bar-{{ metrics.health }}" id="d-cpu-bar" style="width: {{ metrics.cpu_percent }}%"></div></div>
+        <p class="meta">Busy estimate from a single <code>/proc/stat</code> sample.</p>
+      </section>
+      <section class="panel">
+        <h2>Memory</h2>
+        <p class="gauge-value" id="d-mem">{{ metrics.memory_percent }}%</p>
+        <div class="bar"><div class="bar-fill bar-{{ metrics.health }}" id="d-mem-bar" style="width: {{ metrics.memory_percent }}%"></div></div>
+        <p class="meta" id="d-mem-text">{{ metrics.memory_used_mb }} / {{ metrics.memory_total_mb }} MB used</p>
+      </section>
+      <section class="panel">
+        <h2>Network</h2>
+        <p class="gauge-value" id="d-net-status">{{ metrics.network_status }}</p>
+        <p class="meta" id="d-net-bytes">RX {{ metrics.network_rx_bytes }} bytes · TX {{ metrics.network_tx_bytes }} bytes (totals since boot, non-lo)</p>
+      </section>
+    </div>
+    <section class="panel" style="margin-top:1.25rem">
+      <h2>Listening ports</h2>
+      <div id="d-ports">
+        {% if metrics.listening_ports %}
+          <table class="ports-table">
+            <thead><tr><th>Protocol</th><th>Local address</th></tr></thead>
+            <tbody>
+              {% for p in metrics.listening_ports %}
+                <tr><td>{{ p.protocol }}</td><td><code>{{ p.local_address }}</code></td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p class="empty-state">No listening ports reported.</p>
+        {% endif %}
+      </div>
+    </section>
+  {% else %}
+    <div class="empty-state error-state" id="d-error">
+      <strong>Unreachable</strong>
+      <p>{{ metrics.error or 'Could not collect metrics over SSH.' }}</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/detail.js') }}"></script>
+{% endblock %}

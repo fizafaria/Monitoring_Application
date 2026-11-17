@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in · Linux Monitor{% endblock %}
+
+{% block content %}
+<section class="auth-panel">
+  <p class="eyebrow">Secure access</p>
+  <h1>Sign in</h1>
+  <p class="lede">Single admin account for this local demo.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flash-list" role="alert">
+        {% for category, message in messages %}
+          <li class="flash flash-{{ category }}">{{ message }}</li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+
+  <form class="auth-form" method="post" action="{{ url_for('main.login', next=request.args.get('next', '')) }}">
+    <label class="field">
+      <span>Username</span>
+      <input type="text" name="username" autocomplete="username" required autofocus placeholder="admin">
+    </label>
+    <label class="field">
+      <span>Password</span>
+      <input type="password" name="password" autocomplete="current-password" required placeholder="••••••••">
+    </label>
+    <button type="submit" class="btn btn-primary">Sign in</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard · Linux Monitor{% endblock %}
+
+{% block nav %}
+  <a class="nav-link" href="{{ url_for('main.manage_servers') }}">Manage servers</a>
+  <form method="post" action="{{ url_for('main.logout') }}" class="nav-form">
+    <button type="submit" class="btn btn-ghost">Sign out</button>
+  </form>
+{% endblock %}
+
+{% block content %}
+<section class="page-intro">
+  <div>
+    <p class="eyebrow">Monitoring overview</p>
+    <h1>Linux infrastructure dashboard</h1>
+    <p class="lede">Live CPU, memory, network, and health for registered hosts (SSH, read-only).</p>
+  </div>
+  <div class="toolbar">
+    <span class="meta" id="last-refreshed">Last refreshed: {{ last_refreshed }}</span>
+    <button type="button" class="btn btn-primary" id="refresh-btn">Refresh</button>
+  </div>
+</section>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <ul class="flash-list" role="alert">
+      {% for category, message in messages %}
+        <li class="flash flash-{{ category }}">{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+
+<div class="summary-row" id="summary-row">
+  <div class="summary-card"><span class="summary-label">Total</span><strong id="sum-total">{{ summary.total }}</strong></div>
+  <div class="summary-card summary-ok"><span class="summary-label">Healthy</span><strong id="sum-healthy">{{ summary.healthy }}</strong></div>
+  <div class="summary-card summary-warn"><span class="summary-label">Warning</span><strong id="sum-warning">{{ summary.warning }}</strong></div>
+  <div class="summary-card summary-crit"><span class="summary-label">Critical</span><strong id="sum-critical">{{ summary.critical }}</strong></div>
+</div>
+
+<form class="filter-bar" method="get" action="{{ url_for('main.index') }}" id="filter-form">
+  <label class="field field-inline">
+    <span class="sr-only">Search</span>
+    <input type="search" name="q" id="filter-q" value="{{ query }}" placeholder="Search name or IP…">
+  </label>
+  <label class="field field-inline">
+    <span class="sr-only">Health</span>
+    <select name="health" id="filter-health">
+      <option value="all" {% if health_filter == 'all' %}selected{% endif %}>All health</option>
+      <option value="healthy" {% if health_filter == 'healthy' %}selected{% endif %}>Healthy</option>
+      <option value="warning" {% if health_filter == 'warning' %}selected{% endif %}>Warning</option>
+      <option value="critical" {% if health_filter == 'critical' %}selected{% endif %}>Critical</option>
+    </select>
+  </label>
+  <button type="submit" class="btn btn-ghost">Apply</button>
+</form>
+
+<section class="card-grid" id="card-grid"
+  data-api="{{ url_for('main.api_metrics') }}"
+  data-refresh-ms="8000">
+  {% if metrics %}
+    {% for m in metrics %}
+      <a class="server-card health-{{ m.health }}" href="{{ url_for('main.server_detail', server_id=m.server_id) }}" data-id="{{ m.server_id }}" data-name="{{ m.name|lower }}" data-host="{{ m.host|lower }}" data-health="{{ m.health }}">
+        <div class="card-top">
+          <div>
+            <strong class="card-name">{{ m.name }}</strong>
+            <span class="meta card-host">{{ m.host }}</span>
+          </div>
+          <span class="badge badge-{{ m.health }}">{% if m.reachable %}{{ m.health }}{% else %}offline{% endif %}</span>
+        </div>
+        {% if m.reachable %}
+          <div class="metric-block">
+            <div class="metric-label"><span>CPU</span><span class="card-cpu">{{ m.cpu_percent }}%</span></div>
+            <div class="bar"><div class="bar-fill bar-{{ m.health }}" style="width: {{ m.cpu_percent }}%"></div></div>
+          </div>
+          <div class="metric-block">
+            <div class="metric-label"><span>Memory</span><span class="card-mem">{{ m.memory_percent }}%</span></div>
+            <div class="bar"><div class="bar-fill bar-{{ m.health }}" style="width: {{ m.memory_percent }}%"></div></div>
+          </div>
+          <div class="meta card-net">Network: {{ m.network_status }} · RX {{ m.network_rx_bytes }} / TX {{ m.network_tx_bytes }}</div>
+        {% else %}
+          <p class="card-error">{{ m.error or 'Unreachable' }}</p>
+        {% endif %}
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state" id="empty-state">
+      {% if server_count == 0 %}
+        No servers registered yet. <a href="{{ url_for('main.manage_servers') }}">Add a Linux host</a>.
+      {% else %}
+        No servers match this search/filter.
+      {% endif %}
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}
