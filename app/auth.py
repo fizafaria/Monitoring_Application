@@ -11,7 +11,7 @@ from werkzeug.security import check_password_hash
 
 F = TypeVar("F", bound=Callable)
 
-ADMIN_USERNAME = "admin"
+ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 
 
 def get_admin_password_hash() -> str:
